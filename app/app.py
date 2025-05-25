@@ -5,18 +5,17 @@ from pydantic import BaseModel
 from fastapi.responses import FileResponse
 from app.ragpipeline import load_faiss_index, get_top_k_context, generate_response
 from app.feedback import save_feedback_txt
-from dotenv import load_dotenv  # ✅ Load environment variables
+from dotenv import load_dotenv
 
-# ✅ Load environment variables from .env
+# Load environment variables from .env
 load_dotenv()
 
-# ✅ Read PORT from environment (fallback to 8000)
 PORT = int(os.getenv("PORT", 8000))
 FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN", "https://zingy-tapioca-5cd938.netlify.app")
+API_TOKEN = os.getenv("API_TOKEN")  # Load API token securely
 
 app = FastAPI()
 
-# ✅ Secure CORS settings for production
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[FRONTEND_ORIGIN],
@@ -40,7 +39,7 @@ class QueryOutput(BaseModel):
 def ask_question(query: QueryInput):
     context_docs = get_top_k_context(query.question)
     context = "\n".join(doc.page_content for doc in context_docs)
-    response = generate_response(context=context, question=query.question, use_api=True)
+    response = generate_response(context=context, question=query.question, api_token=API_TOKEN, use_api=True)
 
     final_response = response["response"] if isinstance(response, dict) and "response" in response else response
 
@@ -72,7 +71,6 @@ def download_feedback():
     else:
         return {"error": "Feedback log file does not exist."}
 
-# ✅ Production-safe entry point (no reload, dynamic port)
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("app:app", host="0.0.0.0", port=PORT)
