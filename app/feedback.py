@@ -1,11 +1,19 @@
 import csv
 import os
+import logging
 from datetime import datetime
 
-def save_feedback_txt(question, context, response, feedback, file_path="feedback_logs.csv"):
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+# Setup logging
+logging.basicConfig(level=logging.INFO)
 
-    # Check if file exists to decide whether to write header
+# Feedback storage directory
+FEEDBACK_DIR = "logs"
+os.makedirs(FEEDBACK_DIR, exist_ok=True)
+
+def save_feedback_txt(question, context, response, feedback, file_name="feedback_logs.csv"):
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    file_path = os.path.join(FEEDBACK_DIR, file_name)
+
     file_exists = os.path.isfile(file_path)
 
     try:
@@ -13,19 +21,18 @@ def save_feedback_txt(question, context, response, feedback, file_path="feedback
             fieldnames = ["Timestamp", "Question", "Context", "Model Response", "Feedback"]
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
-            # Write header only if file is new
             if not file_exists:
                 writer.writeheader()
 
             writer.writerow({
                 "Timestamp": timestamp,
-                "Question": question,
+                "Question": question.strip(),
                 "Context": context.strip(),
                 "Model Response": response.strip(),
                 "Feedback": feedback.strip()
             })
 
-        print("✅ Feedback saved to feedback_logs.csv")
+        logging.info("✅ Feedback saved to %s", file_path)
 
     except Exception as e:
-        print(f"❌ Failed to save feedback: {str(e)}")
+        logging.error("❌ Failed to save feedback: %s", str(e))
