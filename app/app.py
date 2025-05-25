@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from fastapi.responses import FileResponse
 from app.ragpipeline import load_faiss_index, get_top_k_context, generate_response
-from feedback import save_feedback_txt
+from app.feedback import save_feedback_txt
 import uvicorn
 
 import os
