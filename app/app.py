@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from fastapi.responses import FileResponse
-from ragpipeline import load_faiss_index, get_top_k_context, generate_response
+from app.ragpipeline import load_faiss_index, get_top_k_context, generate_response
 from feedback import save_feedback_txt
 import uvicorn
 
