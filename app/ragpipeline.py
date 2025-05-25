@@ -6,34 +6,28 @@ from langchain_core.runnables import RunnableLambda, RunnablePassthrough
 from langchain_community.vectorstores import FAISS
 from langchain.memory import ConversationBufferMemory
 from dotenv import load_dotenv
-load_dotenv()
-import os
-API_TOKEN = os.getenv("API_TOKEN")
-
-
-
 import os
 import requests
-API_TOKEN = "18yvu2WK3ugBJvbiWEz0r823__ho_NvnEFPJ0DsX"
+
+# Load environment variables
+load_dotenv()
+
+API_TOKEN = os.getenv("API_TOKEN")
+if not API_TOKEN:
+    raise ValueError("Missing API_TOKEN in environment")
+
 API_BASE_URL = "https://api.cloudflare.com/client/v4/accounts/47055a3a6ea4207316ce59689541eae5/ai/run/"
-headers = {"Authorization": f"Bearer {API_TOKEN}"}
+HEADERS = {"Authorization": f"Bearer {API_TOKEN}"}
 
 memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
 
-
 def run(model, inputs):
-    input = { "messages": inputs }
-    response = requests.post(f"{API_BASE_URL}{model}", headers=headers, json=input)
-    return response.json()
-
-
-# inputs = [
-#     { "role": "system", "content": "You are a friendly assistan that helps write stories" },
-#     { "role": "user", "content": "Write a short story about a llama that goes on a journey to find an orange cloud "}
-# ];
-# output = run("@cf/meta/llama-3-8b-instruct", inputs)
-# print(output)
-
+    try:
+        response = requests.post(f"{API_BASE_URL}{model}", headers=HEADERS, json={"messages": inputs})
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        return {"response": f"API call failed: {e}"}
 
 # Load FAISS index
 def load_faiss_index(path="faiss_index"):
@@ -47,11 +41,12 @@ def load_faiss_index(path="faiss_index"):
 def get_top_k_context(question):
     return retriever.invoke(question)
 
-
+# Generate response from context
 def generate_response(context, question, use_api=False):
     prompt_template = """
 You are a helpful chatbot assistant for Bignalytics Institute.
-Answer the question using only the context below. Just generate output from the given context. If it is not present in context, don't make it up and just say "I am sorry can you ask another question".
+Answer the question using only the context below. Just generate output from the given context.
+If it is not present in context, don't make it up and just say "I am sorry can you ask another question".
 
 Context:
 {context}
@@ -59,7 +54,6 @@ Context:
 Question:
 {question}
 """
-
     full_prompt = prompt_template.format(context=context, question=question)
 
     if use_api:
@@ -68,10 +62,7 @@ Question:
             {"role": "user", "content": full_prompt}
         ]
         response = run("@cf/meta/llama-3-8b-instruct", inputs)
-        if isinstance(response, dict):
-            return response.get("response") or response.get("result") or "Sorry, no valid response received from the model."
-        else:
-            return "Invalid response format from model API."
+        return response.get("response") or response.get("result") or "Sorry, no valid response received from the model."
     else:
         prompt = ChatPromptTemplate.from_template(prompt_template)
         model = OllamaLLM(model="llama3.1:8b")
@@ -82,4 +73,3 @@ Question:
             | StrOutputParser()
         )
         return rag_chain.invoke({"context": context, "question": question})
-
